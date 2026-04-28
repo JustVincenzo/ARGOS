@@ -1,0 +1,25 @@
+# ==========================================
+# ARGOS — Requerimientos principales
+# ==========================================
+
+# Discord
+discord.py>=2.7.1
+
+# Configuración
+python-dotenv>=1.0.1
+
+# Base de datos local async
+aiosqlite>=0.20.0
+
+# Peticiones web / APIs externas
+aiohttp>=3.9.0
+
+# Fechas, duraciones y sanciones temporales
+python-dateutil>=2.9.0
+pytz>=2024.1
+
+# Imágenes: quotes, cards, banners, avatares
+Pillow>=10.0.0
+
+# Validación de configuración y datos
+pydantic>=2.0.0
