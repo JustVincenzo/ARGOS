@@ -8,8 +8,8 @@ discord.py>=2.7.1
 # Configuración
 python-dotenv>=1.0.1
 
-# Base de datos local async
-aiosqlite>=0.20.0
+# PostgreSQL async
+asyncpg>=0.30.0
 
 # Peticiones web / APIs externas
 aiohttp>=3.9.0
