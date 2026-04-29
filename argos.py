@@ -172,7 +172,7 @@ class ArgosBot(commands.Bot):
 
         activity = discord.Activity(
             type=discord.ActivityType.watching,
-            name="el servidor",
+            name="#info",
         )
 
         await self.change_presence(
