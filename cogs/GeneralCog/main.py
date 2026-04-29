@@ -64,7 +64,8 @@ class GeneralCog(BaseCog):
 
         embed.add_field(
             name="Identidad",
-            value="Observa. Registra. Actúa.",
+            value="Este bot fue codificado con Python usando el framework ´discord.py´.
+            Fue codificado por <@1078714238417248276>",
             inline=False,
         )
 
