@@ -9,6 +9,9 @@ from discord.ext import commands
 from config import PROJECT_ROOT, settings
 from logger import setup_logging
 
+from services.database import Database
+from services.prefix_manager import PrefixManager
+
 
 log = setup_logging(settings.log_level)
 
@@ -37,14 +40,12 @@ def discover_extensions(cogs_folder: str = "cogs") -> list[str]:
         log.warning("No existe la carpeta de cogs: %s", cogs_path)
         return []
 
-    # Formato simple: cogs/moderation.py
     for file in sorted(cogs_path.glob("*.py")):
         if file.name == "__init__.py" or file.name.startswith("_"):
             continue
 
         extensions.add(f"{cogs_folder}.{file.stem}")
 
-    # Formato modular: cogs/moderation_cog/main.py
     for main_file in sorted(cogs_path.glob("*/main.py")):
         if main_file.parent.name.startswith("_"):
             continue
@@ -56,12 +57,27 @@ def discover_extensions(cogs_folder: str = "cogs") -> list[str]:
     return sorted(extensions)
 
 
+async def dynamic_prefix(bot: commands.Bot, message: discord.Message):
+    if message.guild is None:
+        return commands.when_mentioned_or(settings.command_prefix)(bot, message)
+
+    prefix_manager = getattr(bot, "prefix_manager", None)
+
+    if prefix_manager is None:
+        return commands.when_mentioned_or(settings.command_prefix)(bot, message)
+
+    prefix = await prefix_manager.get_prefix(message.guild.id)
+    return commands.when_mentioned_or(prefix)(bot, message)
+
+
 class ArgosBot(commands.Bot):
     """
     Clase principal de ARGOS.
 
     Controla:
     - intents;
+    - conexión a PostgreSQL;
+    - prefijo dinámico por servidor;
     - carga de cogs;
     - sincronización de slash commands;
     - presencia del bot;
@@ -71,13 +87,17 @@ class ArgosBot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.default()
 
-        # Activa estos intents solo si realmente los necesitas
-        # y también los habilitaste en el Discord Developer Portal.
         intents.message_content = settings.enable_message_content_intent
         intents.members = settings.enable_member_intent
 
+        self.database = Database(settings.database_url)
+        self.prefix_manager = PrefixManager(
+            database=self.database,
+            default_prefix=settings.command_prefix,
+        )
+
         super().__init__(
-            command_prefix=settings.command_prefix,
+            command_prefix=dynamic_prefix,
             intents=intents,
             owner_id=settings.owner_id,
             help_command=None,
@@ -94,10 +114,17 @@ class ArgosBot(commands.Bot):
     async def setup_hook(self) -> None:
         log.info("Iniciando setup de ARGOS.")
 
+        await self.database.connect()
+        await self.database.setup_schema()
+
         await self.load_initial_extensions()
 
         if settings.auto_sync_commands:
             await self.sync_application_commands()
+
+    async def close(self) -> None:
+        await self.database.close()
+        await super().close()
 
     async def load_initial_extensions(self) -> None:
         if not self.initial_extensions:
@@ -123,14 +150,6 @@ class ArgosBot(commands.Bot):
         )
 
     async def sync_application_commands(self) -> None:
-        """
-        Sincroniza slash commands.
-
-        Recomendación:
-        - En desarrollo: usar DEBUG_GUILD_ID.
-        - En producción: usar sincronización global solo cuando sea necesario.
-        """
-
         if settings.debug_guild_id:
             guild = discord.Object(id=settings.debug_guild_id)
 
@@ -171,8 +190,8 @@ class ArgosBot(commands.Bot):
         )
 
         activity = discord.Activity(
-            type=discord.ActivityType.watching,
-            name="!info",
+            type=discord.ActivityType.listening,
+            name=f"{settings.command_prefix}ayuda",
         )
 
         await self.change_presence(
@@ -185,12 +204,6 @@ class ArgosBot(commands.Bot):
         ctx: commands.Context,
         error: commands.CommandError,
     ) -> None:
-        """
-        Manejo mínimo para comandos de prefijo.
-
-        Los slash commands se manejarán mejor luego en error_handler_cog.
-        """
-
         log.warning("Error en comando de prefijo: %s", error)
 
         embed = discord.Embed(
