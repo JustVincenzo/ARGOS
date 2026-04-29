@@ -57,8 +57,7 @@ class GeneralCog(BaseCog):
             description=(
                 "ARGOS es un sistema modular para Discord diseñado para servidores "
                 "hispanohablantes. Su objetivo es apoyar al staff con herramientas de "
-                "moderación, registros, tickets, seguridad, utilidades e inteligencia "
-                "artificial controlada."
+                "moderación, registros, tickets, seguridad, utilidades e inteligencia artificial brindada por Gemini."
             ),
         )
 
@@ -307,8 +306,8 @@ class GeneralCog(BaseCog):
             value=(
                 "`ARGOS Guardia` — Moderación.\n"
                 "`ARGOS Vigía` — Logs.\n"
-                "`ARGOS Mesa` — Tickets.\n"
-                "`ARGOS Oráculo` — IA controlada.\n"
+                "`ARGOS Atención` — Tickets.\n"
+                "`ARGOS IA` — IA controlada.\n"
                 "`ARGOS Léxico` — Diccionario y lenguaje."
             ),
             inline=False,
