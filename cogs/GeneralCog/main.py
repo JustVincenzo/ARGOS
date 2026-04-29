@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import timezone
 
 import discord
 from discord import app_commands
+from discord.ext import commands
 
 from base_cog import BaseCog
 
@@ -13,6 +14,7 @@ class GeneralCog(BaseCog):
     ARGOS General
 
     Comandos básicos del bot:
+    - /prefijo
     - /ping
     - /info
     - /servidor
@@ -22,6 +24,120 @@ class GeneralCog(BaseCog):
     """
 
     module_name = "General"
+
+    @app_commands.command(
+        name="prefijo",
+        description="Muestra o cambia el prefijo de ARGOS en este servidor.",
+    )
+    @app_commands.describe(
+        nuevo="Nuevo prefijo del servidor. Déjalo vacío para ver el prefijo actual.",
+    )
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
+    async def prefijo(
+        self,
+        interaction: discord.Interaction,
+        nuevo: str | None = None,
+    ) -> None:
+        guild = interaction.guild
+
+        if guild is None:
+            embed = self.error_embed(
+                title="Comando no disponible",
+                description="Este comando solo puede usarse dentro de un servidor.",
+            )
+            await self.respond_embed(interaction, embed, ephemeral=True)
+            return
+
+        if nuevo is None:
+            current_prefix = await self.bot.prefix_manager.get_prefix(guild.id)
+
+            embed = self.command_embed(
+                title="Prefijo actual",
+                description=f"El prefijo actual de este servidor es `{current_prefix}`.",
+            )
+
+            await self.respond_embed(interaction, embed, ephemeral=True)
+            return
+
+        try:
+            await self.bot.prefix_manager.set_prefix(guild.id, nuevo)
+        except ValueError as exc:
+            embed = self.error_embed(
+                title="Prefijo inválido",
+                description=str(exc),
+            )
+            await self.respond_embed(interaction, embed, ephemeral=True)
+            return
+
+        embed = self.success_embed(
+            title="Prefijo actualizado",
+            description=(
+                f"El prefijo de este servidor ahora es `{nuevo}`.\n\n"
+                f"Ejemplo: `{nuevo}ayuda`"
+            ),
+        )
+
+        await self.respond_embed(interaction, embed, ephemeral=True)
+
+    @commands.command(
+        name="prefijo",
+        aliases=["prefix"],
+    )
+    @commands.guild_only()
+    @commands.has_guild_permissions(manage_guild=True)
+    async def prefix_prefijo(
+        self,
+        ctx: commands.Context,
+        nuevo: str | None = None,
+    ) -> None:
+        if ctx.guild is None:
+            return
+
+        if nuevo is None:
+            current_prefix = await self.bot.prefix_manager.get_prefix(ctx.guild.id)
+
+            embed = self.command_embed(
+                title="Prefijo actual",
+                description=f"El prefijo actual de este servidor es `{current_prefix}`.",
+            )
+
+            await self.send_ctx_embed(ctx, embed)
+            return
+
+        if nuevo.lower() in {"reset", "restablecer", "default"}:
+            await self.bot.prefix_manager.reset_prefix(ctx.guild.id)
+
+            embed = self.success_embed(
+                title="Prefijo restablecido",
+                description=(
+                    "El prefijo de este servidor volvió al valor por defecto: "
+                    f"`{self.bot.prefix_manager.default_prefix}`."
+                ),
+            )
+
+            await self.send_ctx_embed(ctx, embed)
+            return
+
+        try:
+            await self.bot.prefix_manager.set_prefix(ctx.guild.id, nuevo)
+        except ValueError as exc:
+            embed = self.error_embed(
+                title="Prefijo inválido",
+                description=str(exc),
+            )
+            await self.send_ctx_embed(ctx, embed)
+            return
+
+        embed = self.success_embed(
+            title="Prefijo actualizado",
+            description=(
+                f"El prefijo de este servidor ahora es `{nuevo}`.\n\n"
+                f"Ejemplo: `{nuevo}ayuda`"
+            ),
+        )
+
+        await self.send_ctx_embed(ctx, embed)
 
     @app_commands.command(
         name="ping",
@@ -36,6 +152,20 @@ class GeneralCog(BaseCog):
         )
 
         await self.respond_embed(interaction, embed)
+
+    @commands.command(
+        name="ping",
+        aliases=["latencia"],
+    )
+    async def prefix_ping(self, ctx: commands.Context) -> None:
+        latency_ms = round(self.bot.latency * 1000)
+
+        embed = self.command_embed(
+            title="Latencia de ARGOS",
+            description=f"ARGOS está operativo.\n\n**Latencia:** `{latency_ms} ms`",
+        )
+
+        await self.send_ctx_embed(ctx, embed)
 
     @app_commands.command(
         name="info",
@@ -57,13 +187,17 @@ class GeneralCog(BaseCog):
             description=(
                 "ARGOS es un sistema modular para Discord diseñado para servidores "
                 "hispanohablantes. Su objetivo es apoyar al staff con herramientas de "
-                "moderación, registros, tickets, seguridad, utilidades e inteligencia artificial brindada por Gemini."
+                "moderación, registros, tickets, seguridad, utilidades e inteligencia "
+                "artificial brindada por Gemini."
             ),
         )
 
         embed.add_field(
             name="Identidad",
-            value="Este bot fue codificado con Python usando el framework ´discord.py´. Fue codificado por <@1078714238417248276>",
+            value=(
+                "Este bot fue codificado con Python usando el framework `discord.py`.\n"
+                "Fue codificado por <@1078714238417248276>."
+            ),
             inline=False,
         )
 
@@ -88,6 +222,62 @@ class GeneralCog(BaseCog):
         embed.set_thumbnail(url=bot_user.display_avatar.url)
 
         await self.respond_embed(interaction, embed)
+
+    @commands.command(
+        name="info",
+        aliases=["argos"],
+    )
+    async def prefix_info(self, ctx: commands.Context) -> None:
+        bot_user = self.bot.user
+
+        if bot_user is None:
+            embed = self.error_embed(
+                title="Error interno",
+                description="No se pudo obtener la información del bot.",
+            )
+            await self.send_ctx_embed(ctx, embed)
+            return
+
+        embed = self.command_embed(
+            title="ARGOS",
+            description=(
+                "ARGOS es un sistema modular para Discord diseñado para servidores "
+                "hispanohablantes. Su objetivo es apoyar al staff con herramientas de "
+                "moderación, registros, tickets, seguridad, utilidades e inteligencia "
+                "artificial brindada por Gemini."
+            ),
+        )
+
+        embed.add_field(
+            name="Identidad",
+            value=(
+                "Este bot fue codificado con Python usando el framework `discord.py`.\n"
+                "Fue codificado por <@1078714238417248276>."
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Estado",
+            value="Operativo",
+            inline=True,
+        )
+
+        embed.add_field(
+            name="Latencia",
+            value=f"`{round(self.bot.latency * 1000)} ms`",
+            inline=True,
+        )
+
+        embed.add_field(
+            name="Servidores",
+            value=f"`{len(self.bot.guilds)}`",
+            inline=True,
+        )
+
+        embed.set_thumbnail(url=bot_user.display_avatar.url)
+
+        await self.send_ctx_embed(ctx, embed)
 
     @app_commands.command(
         name="servidor",
@@ -265,7 +455,6 @@ class GeneralCog(BaseCog):
         usuario: discord.User | None = None,
     ) -> None:
         target = usuario or interaction.user
-
         avatar_url = target.display_avatar.url
 
         embed = self.command_embed(
@@ -290,12 +479,24 @@ class GeneralCog(BaseCog):
         embed.add_field(
             name="General",
             value=(
+                "`/prefijo` — Muestra o cambia el prefijo del servidor.\n"
                 "`/ping` — Muestra la latencia del bot.\n"
                 "`/info` — Muestra información de ARGOS.\n"
                 "`/servidor` — Muestra información del servidor.\n"
                 "`/usuario` — Muestra información de un usuario.\n"
                 "`/avatar` — Muestra el avatar de un usuario.\n"
                 "`/ayuda` — Muestra esta ayuda."
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Comandos con prefijo",
+            value=(
+                "`!prefijo #` — Cambia el prefijo del servidor.\n"
+                "`!prefijo reset` — Restablece el prefijo por defecto.\n"
+                "`!ping` — Muestra la latencia.\n"
+                "`!info` — Muestra información de ARGOS."
             ),
             inline=False,
         )
@@ -313,6 +514,50 @@ class GeneralCog(BaseCog):
         )
 
         await self.respond_embed(interaction, embed)
+
+    @commands.command(
+        name="ayuda",
+        aliases=["help", "comandos"],
+    )
+    async def prefix_ayuda(self, ctx: commands.Context) -> None:
+        current_prefix = (
+            await self.bot.prefix_manager.get_prefix(ctx.guild.id)
+            if ctx.guild is not None
+            else self.bot.prefix_manager.default_prefix
+        )
+
+        embed = self.command_embed(
+            title="Ayuda de ARGOS",
+            description="Comandos generales disponibles actualmente.",
+        )
+
+        embed.add_field(
+            name="Comandos con prefijo",
+            value=(
+                f"`{current_prefix}prefijo` — Muestra el prefijo actual.\n"
+                f"`{current_prefix}prefijo #` — Cambia el prefijo del servidor.\n"
+                f"`{current_prefix}prefijo reset` — Restablece el prefijo por defecto.\n"
+                f"`{current_prefix}ping` — Muestra la latencia.\n"
+                f"`{current_prefix}info` — Muestra información de ARGOS."
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Comandos slash",
+            value=(
+                "`/prefijo` — Muestra o cambia el prefijo del servidor.\n"
+                "`/ping` — Muestra la latencia del bot.\n"
+                "`/info` — Muestra información de ARGOS.\n"
+                "`/servidor` — Muestra información del servidor.\n"
+                "`/usuario` — Muestra información de un usuario.\n"
+                "`/avatar` — Muestra el avatar de un usuario.\n"
+                "`/ayuda` — Muestra esta ayuda."
+            ),
+            inline=False,
+        )
+
+        await self.send_ctx_embed(ctx, embed)
 
 
 async def setup(bot) -> None:
