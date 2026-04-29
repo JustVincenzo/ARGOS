@@ -48,6 +48,9 @@ class Settings:
     # Cogs
     cogs_folder: str
 
+    # Base de datos
+    database_url: str
+
     # Intents
     enable_message_content_intent: bool
     enable_member_intent: bool
@@ -66,11 +69,16 @@ class Settings:
 
 def load_settings() -> Settings:
     token = os.getenv("DISCORD_TOKEN")
+    database_url = os.getenv("DATABASE_URL")
 
     if not token:
         raise RuntimeError(
-            "Falta DISCORD_TOKEN en el archivo .env. "
-            "ARGOS no puede iniciar sin token."
+            "Falta DISCORD_TOKEN. ARGOS no puede iniciar sin token."
+        )
+
+    if not database_url:
+        raise RuntimeError(
+            "Falta DATABASE_URL. ARGOS necesita PostgreSQL para iniciar."
         )
 
     return Settings(
@@ -82,6 +90,8 @@ def load_settings() -> Settings:
         debug_guild_id=_get_int("DEBUG_GUILD_ID"),
 
         cogs_folder=os.getenv("COGS_FOLDER", "cogs"),
+
+        database_url=database_url,
 
         enable_message_content_intent=_get_bool(
             "ENABLE_MESSAGE_CONTENT_INTENT",
